@@ -66,7 +66,7 @@ public class DlgPasien extends javax.swing.JDialog {
     private sekuel Sequel=new sekuel();
     private validasi Valid=new validasi();
     private Connection koneksi=koneksiDB.condb();
-    public  DlgPenanggungJawab penjab=new DlgPenanggungJawab(null,false);
+    public  DlgCariCaraBayar penjab=new DlgCariCaraBayar(null,false);
     public  DlgKabupaten kab=new DlgKabupaten(null,false);
     public  DlgPropinsi prop=new DlgPropinsi(null,false);
     public  DlgKecamatan kec=new DlgKecamatan(null,false);
@@ -2396,7 +2396,6 @@ public class DlgPasien extends javax.swing.JDialog {
         ppRegistrasi1.setForeground(new java.awt.Color(50, 50, 50));
         ppRegistrasi1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/picture/category.png"))); // NOI18N
         ppRegistrasi1.setText("Tampilkan Tidak Aktif > 5 Tahun");
-        ppRegistrasi1.setActionCommand("Tampilkan Tidak Aktif > 5 Tahun");
         ppRegistrasi1.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         ppRegistrasi1.setHorizontalTextPosition(javax.swing.SwingConstants.RIGHT);
         ppRegistrasi1.setName("ppRegistrasi1"); // NOI18N
