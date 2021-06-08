@@ -9,16 +9,26 @@
     $header = apache_request_headers();
     $method = $_SERVER['REQUEST_METHOD'];
     
-    if (($method == 'GET') && (!empty($header['x-username'])) && (!empty($header['x-password']))) {
+    if ($method == 'GET') {
         $hash_user = hash_pass($header['x-username'], 12);
         $hash_pass = hash_pass($header['x-password'], 12);
         switch ($url[0]) {
             case "auth":
+                if((!empty($header['x-username'])) && (!empty($header['x-password']))){
                     $response=createtoken($header['x-username'],$header['x-password']);
+                }else{
+                    $response = array(
+                        'metadata' => array(
+                            'message' => 'Nama User / Password / Token ada yang salah ..!!',
+                            'code' => 201
+                        )
+                    );
+                    http_response_code(201);
+                }
                 break;
             case "antrean":
                     if (!empty($url[1]) and $url[1] == "status") {
-                        if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                        if((!empty($header['x-token'])) && (!empty($header['x-username'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                             $kodepolipcare=isset($url[2])?$url[2]:null;
                             $tanggaldaftar=isset($url[3])?$url[3]:null;
                             if(strpos($kodepolipcare,"'")||strpos($kodepolipcare,"\\")){
@@ -100,7 +110,7 @@
                     }
 
                     if (!empty($url[1]) and $url[1] == "sisapeserta") {
-                        if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                        if((!empty($header['x-token'])) && (!empty($header['x-username'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                             $no_peserta=isset($url[2])?$url[2]:null;
                             $kodepolipcare=isset($url[3])?$url[3]:null;
                             $tanggaldaftar=isset($url[4])?$url[4]:null;
@@ -180,7 +190,7 @@
                                                 'nomorantrean' => $data['no_reg'],
                                                 'namapoli' => $data['nm_poli'],
                                                 'sisaantrean' => $data['sisa_antrean'],
-                                                'antreanpanggil' => $data['no_reg'],
+                                                'antreanpanggil' => $data['antrean_panggil'],
                                                 'keterangan' => $data['keterangan']
                                             ),
                                             'metadata' => array(
@@ -214,7 +224,7 @@
         }
     }
   
-    if (($method == 'POST') && (!empty($header['x-username'])) && (!empty($header['x-password']))) {
+    if (($method == 'POST') && (!empty($header['x-username'])) && (!empty($header['x-token']))) {
         $hash_user = hash_pass($header['x-username'], 12);
         switch ($url[0]) {
             case "antrean":
@@ -222,7 +232,7 @@
                 $konten = trim(file_get_contents("php://input"));
                 $decode = json_decode($konten, true);
                 
-                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                if((!empty($header['x-token'])) && (!empty($header['x-username'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                     if (empty($decode['nomorkartu'])){ 
                         $response = array(
                             'metadata' => array(
@@ -359,16 +369,15 @@
                                     http_response_code(201);
                                 }else{
                                     $hari      = hariindo($decode['tanggalperiksa']);
-                                    $cek_kouta = fetch_array(bukaquery("SELECT jadwal.kuota - COALESCE((select COUNT(reg_periksa.tgl_registrasi) FROM reg_periksa 
-                                            WHERE reg_periksa.tgl_registrasi='$decode[tanggalperiksa]' AND reg_periksa.kd_dokter=jadwal.kd_dokter )) as sisa_kouta, jadwal.kd_dokter, jadwal.kd_poli, 
-                                            jadwal.jam_mulai + INTERVAL '10' MINUTE as jam_waktu, poliklinik.nm_poli,dokter.nm_dokter,
+                                    $cek_kouta = fetch_array(bukaquery("SELECT sum(jadwal.kuota) - COALESCE((select COUNT(reg_periksa.tgl_registrasi) FROM reg_periksa 
+                                            WHERE reg_periksa.tgl_registrasi='$decode[tanggalperiksa]' AND reg_periksa.kd_poli=jadwal.kd_poli )) as sisa_kouta,jadwal.kd_poli, 
+                                            jadwal.jam_mulai + INTERVAL '10' MINUTE as jam_waktu, poliklinik.nm_poli,jadwal.kd_dokter,
                                             ('Datang 30 Menit sebelum pelayanan, Konfirmasi kehadiran dibagian pendaftaran dengan menunjukan bukti pendaftaran melalui Mobile JKN, Terima Kasih..') as keterangan
                                             FROM jadwal
                                             INNER JOIN maping_poliklinik_pcare ON maping_poliklinik_pcare.kd_poli_rs=jadwal.kd_poli
                                             INNER JOIN poliklinik ON poliklinik.kd_poli=jadwal.kd_poli
-                                            INNER JOIN dokter ON dokter.kd_dokter=jadwal.kd_dokter
                                             WHERE jadwal.hari_kerja='$hari' AND  maping_poliklinik_pcare.kd_poli_pcare='$decode[kodepoli]'
-                                            GROUP BY jadwal.kd_dokter
+                                            GROUP BY jadwal.kd_poli
                                             HAVING sisa_kouta > 0
                                             ORDER BY sisa_kouta DESC LIMIT 1"));
                                     if (!empty($cek_kouta['sisa_kouta']) and $cek_kouta['sisa_kouta'] > 0) {
@@ -452,7 +461,7 @@
         }
     }
     
-    if (($method == 'PUT') && (!empty($header['x-username'])) && (!empty($header['x-password']))) {
+    if (($method == 'PUT') && (!empty($header['x-username'])) && (!empty($header['x-token']))) {
         $hash_user = hash_pass($header['x-username'], 12);
         switch ($url[0]) {
             case "antrean":
@@ -461,7 +470,7 @@
                     $konten = trim(file_get_contents("php://input"));
                     $decode = json_decode($konten, true);
 
-                    if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                    if((!empty($header['x-token'])) && (!empty($header['x-username'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                         if (empty($decode['nomorkartu'])){ 
                             $response = array(
                                 'metadata' => array(

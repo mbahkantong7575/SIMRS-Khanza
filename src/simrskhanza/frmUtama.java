@@ -440,6 +440,9 @@ import bridging.PCareCekKartu;
 import grafikanalisa.GrafikHemodialisaPerBulan;
 import grafikanalisa.GrafikHemodialisaPerTanggal;
 import grafikanalisa.GrafikInventarisPerJenis;
+import grafikanalisa.GrafikInventarisPerKategori;
+import grafikanalisa.GrafikInventarisPerMerk;
+import grafikanalisa.GrafikInventarisPerProdusen;
 import grafikanalisa.GrafikInventarisPerRuang;
 import grafikanalisa.GrafikItemApotekPerGolongan;
 import grafikanalisa.GrafikItemApotekPerIndustriFarmasi;
@@ -600,6 +603,7 @@ import laporan.DlgKIPPasienRanap;
 import laporan.DlgKlasifikasiPasienPerBangsal;
 import laporan.DlgLamaPelayananPasien;
 import laporan.DlgPelayananLabPA;
+import laporan.DlgPelayananOperasi;
 import laporan.DlgPelayananPoli;
 import laporan.DlgPenyiapanRM;
 import laporan.DlgRekapKunjungan;
@@ -17075,6 +17079,50 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
         this.setCursor(Cursor.getDefaultCursor());
     }
     
+    private void btnLamaOperasiActionPerformed(java.awt.event.ActionEvent evt) {                                                      
+        isTutup();
+        DlgHome.dispose();
+        this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        DlgPelayananOperasi aplikasi=new DlgPelayananOperasi(this,false);
+        aplikasi.setSize(PanelUtama.getWidth(), PanelUtama.getHeight());
+        aplikasi.setLocationRelativeTo(PanelUtama);
+        aplikasi.setVisible(true);
+        this.setCursor(Cursor.getDefaultCursor());
+    }  
+    
+    private void btnGrafikInventarisKategoriActionPerformed(java.awt.event.ActionEvent evt) {                                                                  
+        isTutup();
+        DlgHome.dispose();
+        this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        GrafikInventarisPerKategori aplikasi=new GrafikInventarisPerKategori(this,true);
+        aplikasi.setSize(PanelUtama.getWidth(), PanelUtama.getHeight());
+        aplikasi.setLocationRelativeTo(PanelUtama);
+        aplikasi.setVisible(true);
+        this.setCursor(Cursor.getDefaultCursor());
+    } 
+    
+    private void btnGrafikInventarisMerkActionPerformed(java.awt.event.ActionEvent evt) {                                                                  
+        isTutup();
+        DlgHome.dispose();
+        this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        GrafikInventarisPerMerk aplikasi=new GrafikInventarisPerMerk(this,true);
+        aplikasi.setSize(PanelUtama.getWidth(), PanelUtama.getHeight());
+        aplikasi.setLocationRelativeTo(PanelUtama);
+        aplikasi.setVisible(true);
+        this.setCursor(Cursor.getDefaultCursor());
+    } 
+    
+    private void btnGrafikInventarisProdusenActionPerformed(java.awt.event.ActionEvent evt) {                                                                  
+        isTutup();
+        DlgHome.dispose();
+        this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        GrafikInventarisPerProdusen aplikasi=new GrafikInventarisPerProdusen(this,true);
+        aplikasi.setSize(PanelUtama.getWidth(), PanelUtama.getHeight());
+        aplikasi.setLocationRelativeTo(PanelUtama);
+        aplikasi.setVisible(true);
+        this.setCursor(Cursor.getDefaultCursor());
+    } 
+    
     private void btnTagihanHutangObatActionPerformed(java.awt.event.ActionEvent evt) {
         
     }
@@ -17697,7 +17745,8 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
             btnRingkasanPenerimaanNonMedis,btnRingkasanStokKeluarNonMedis,btnRingkasanReturSuplierNonMedis,btnOmsetPenerimaan,btnValidasiPenagihanPiutang,
             btnPermintaanRanap,btnBPJSReferensiDiagnosaPRB,btnBPJSReferensiObatPRB,btnBPJSSuratKontrol,btnPenggunaanBHPOK,btnSuratKeteranganRawatInap,
             btnSuratKeteranganSehat,btnPendapatanPerCaraBayar,btnAkunRekeningHtHBankJateng,btnPembayaranBankJateng,btnBPJSSuratPRI,btnRingkasanTindakanRalan,
-            btnLamaPelayananPasien,btnSuratSakitPihak2,btnReferensiPendaftaranMobileJKN,btnBatalPendaftaranMobileJKN,btnTagihanHutangObat;
+            btnLamaPelayananPasien,btnSuratSakitPihak2,btnReferensiPendaftaranMobileJKN,btnBatalPendaftaranMobileJKN,btnTagihanHutangObat,btnLamaOperasi,
+            btnGrafikInventarisKategori,btnGrafikInventarisMerk,btnGrafikInventarisProdusen;
     
     public void isWall(){
         try{            
@@ -19217,6 +19266,11 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
             
             if(akses.getlama_pelayanan_pasien()==true){  
                 Panelmenu.add(btnLamaPelayananPasien);                 
+                jmlmenu++;
+            }
+            
+            if(akses.getlama_operasi()==true){  
+                Panelmenu.add(btnLamaOperasi);                 
                 jmlmenu++;
             }
             
@@ -20877,6 +20931,21 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
             
             if(akses.getgrafik_bulanan_meninggal()==true){
                 Panelmenu.add(btnGrafikMeninggalPerBulan);
+                jmlmenu++;
+            }
+            
+            if(akses.getgrafik_inventaris_kategori()==true){
+                Panelmenu.add(btnGrafikInventarisKategori);
+                jmlmenu++;
+            }
+            
+            if(akses.getgrafik_inventaris_merk()==true){
+                Panelmenu.add(btnGrafikInventarisMerk);
+                jmlmenu++;
+            }
+            
+            if(akses.getgrafik_inventaris_produsen()==true){
+                Panelmenu.add(btnGrafikInventarisProdusen);
                 jmlmenu++;
             }
         }else if(cmbMenu.getSelectedIndex()==14){
@@ -22810,6 +22879,11 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
             jmlmenu++;
         }
         
+        if(akses.getlama_operasi()==true){  
+            Panelmenu.add(btnLamaOperasi);                 
+            jmlmenu++;
+        }
+        
         if(akses.getdosis_radiologi()==true){  
             Panelmenu.add(btnDosisRadiologi);                 
             jmlmenu++;
@@ -24462,6 +24536,21 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
         
         if(akses.getgrafik_bulanan_meninggal()==true){
             Panelmenu.add(btnGrafikMeninggalPerBulan);
+            jmlmenu++;
+        }
+        
+        if(akses.getgrafik_inventaris_kategori()==true){
+            Panelmenu.add(btnGrafikInventarisKategori);
+            jmlmenu++;
+        }
+        
+        if(akses.getgrafik_inventaris_merk()==true){
+            Panelmenu.add(btnGrafikInventarisMerk);
+            jmlmenu++;
+        }
+        
+        if(akses.getgrafik_inventaris_produsen()==true){
+            Panelmenu.add(btnGrafikInventarisProdusen);
             jmlmenu++;
         }
 
@@ -26952,6 +27041,13 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
             }                
         }
         
+        if(akses.getlama_operasi()==true){  
+            if(btnLamaOperasi.getText().toLowerCase().trim().contains(TCari.getText().toLowerCase().trim())){
+                Panelmenu.add(btnLamaOperasi);                 
+                jmlmenu++;
+            }                
+        }
+        
         if(akses.getdosis_radiologi()==true){  
             if(btnDosisRadiologi.getText().toLowerCase().trim().contains(TCari.getText().toLowerCase().trim())){
                 Panelmenu.add(btnDosisRadiologi);                 
@@ -29266,6 +29362,27 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
             }                
         }
         
+        if(akses.getgrafik_inventaris_kategori()==true){
+            if(btnGrafikInventarisKategori.getText().toLowerCase().trim().contains(TCari.getText().toLowerCase().trim())){
+                Panelmenu.add(btnGrafikInventarisKategori);
+                jmlmenu++;
+            }                
+        }
+        
+        if(akses.getgrafik_inventaris_merk()==true){
+            if(btnGrafikInventarisMerk.getText().toLowerCase().trim().contains(TCari.getText().toLowerCase().trim())){
+                Panelmenu.add(btnGrafikInventarisMerk);
+                jmlmenu++;
+            }                
+        }
+        
+        if(akses.getgrafik_inventaris_produsen()==true){
+            if(btnGrafikInventarisProdusen.getText().toLowerCase().trim().contains(TCari.getText().toLowerCase().trim())){
+                Panelmenu.add(btnGrafikInventarisProdusen);
+                jmlmenu++;
+            }                
+        }
+        
         if(akses.getsurat_indeks()==true){
             if(btnSuratIndeks.getText().toLowerCase().trim().contains(TCari.getText().toLowerCase().trim())){
                 Panelmenu.add(btnSuratIndeks);
@@ -30712,7 +30829,7 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
         
         btnGrafikInventarisRuang = new widget.ButtonBig();
         btnGrafikInventarisRuang.setIcon(new javax.swing.ImageIcon(getClass().getResource("/48x48/1491582080_6.png"))); 
-        btnGrafikInventarisRuang.setText("Jumlah Inventaris Ruang");
+        btnGrafikInventarisRuang.setText("Jumlah Inventaris Per Ruang");
         btnGrafikInventarisRuang.setIconTextGap(0);
         btnGrafikInventarisRuang.setName("btnGrafikInventarisRuang"); 
         btnGrafikInventarisRuang.setPreferredSize(new java.awt.Dimension(200, 90));
@@ -30728,7 +30845,7 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
         
         btnGrafikInventarisJenis = new widget.ButtonBig();
         btnGrafikInventarisJenis.setIcon(new javax.swing.ImageIcon(getClass().getResource("/48x48/1491582015_11.png"))); 
-        btnGrafikInventarisJenis.setText("Jumlah Inventaris Jenis");
+        btnGrafikInventarisJenis.setText("Jumlah Inventaris Per Jenis");
         btnGrafikInventarisJenis.setIconTextGap(0);
         btnGrafikInventarisJenis.setName("btnGrafikInventarisJenis"); 
         btnGrafikInventarisJenis.setPreferredSize(new java.awt.Dimension(200, 90));
@@ -32062,6 +32179,38 @@ private void MnGantiPasswordBtnLogActionPerformed(java.awt.event.ActionEvent evt
         btnTagihanHutangObat.setName("btnTagihanHutangObat"); 
         btnTagihanHutangObat.setPreferredSize(new java.awt.Dimension(200, 90));
         btnTagihanHutangObat.addActionListener(this::btnTagihanHutangObatActionPerformed);
+        
+        btnLamaOperasi = new widget.ButtonBig();
+        btnLamaOperasi.setIcon(new javax.swing.ImageIcon(getClass().getResource("/48x48/Gnome-X-Office-Address-Book-48.png"))); // NOI18N
+        btnLamaOperasi.setText("Lama Operasi");
+        btnLamaOperasi.setIconTextGap(0);
+        btnLamaOperasi.setName("btnLamaOperasi"); 
+        btnLamaOperasi.setPreferredSize(new java.awt.Dimension(200, 90));
+        btnLamaOperasi.addActionListener(this::btnLamaOperasiActionPerformed);
+        
+        btnGrafikInventarisKategori = new widget.ButtonBig();
+        btnGrafikInventarisKategori.setIcon(new javax.swing.ImageIcon(getClass().getResource("/48x48/1491582015_11.png"))); 
+        btnGrafikInventarisKategori.setText("Jumlah Inventaris Per Kategori");
+        btnGrafikInventarisKategori.setIconTextGap(0);
+        btnGrafikInventarisKategori.setName("btnGrafikInventarisKategori"); 
+        btnGrafikInventarisKategori.setPreferredSize(new java.awt.Dimension(200, 90));
+        btnGrafikInventarisKategori.addActionListener(this::btnGrafikInventarisKategoriActionPerformed);
+        
+        btnGrafikInventarisMerk = new widget.ButtonBig();
+        btnGrafikInventarisMerk.setIcon(new javax.swing.ImageIcon(getClass().getResource("/48x48/1491582080_6.png"))); 
+        btnGrafikInventarisMerk.setText("Jumlah Inventaris Per Merk");
+        btnGrafikInventarisMerk.setIconTextGap(0);
+        btnGrafikInventarisMerk.setName("btnGrafikInventarisMerk"); 
+        btnGrafikInventarisMerk.setPreferredSize(new java.awt.Dimension(200, 90));
+        btnGrafikInventarisMerk.addActionListener(this::btnGrafikInventarisMerkActionPerformed);
+        
+        btnGrafikInventarisProdusen = new widget.ButtonBig();
+        btnGrafikInventarisProdusen.setIcon(new javax.swing.ImageIcon(getClass().getResource("/48x48/1491582015_11.png"))); 
+        btnGrafikInventarisProdusen.setText("Jumlah Inventaris Per Produsen");
+        btnGrafikInventarisProdusen.setIconTextGap(0);
+        btnGrafikInventarisProdusen.setName("btnGrafikInventarisProdusen"); 
+        btnGrafikInventarisProdusen.setPreferredSize(new java.awt.Dimension(200, 90));
+        btnGrafikInventarisProdusen.addActionListener(this::btnGrafikInventarisProdusenActionPerformed);
     }
 
     

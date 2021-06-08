@@ -26,14 +26,14 @@
         }
     }
   
-    if (($method == 'POST') && (!empty($header['x-username'])) && (!empty($header['x-password']))) {
+    if (($method == 'POST') && (!empty($header['x-username'])) && (!empty($header['x-token']))) {
         $hash_user = hash_pass($header['x-username'], 12);
         switch ($url[0]) {
             case "statusantrean":
                 $header = apache_request_headers();
                 $konten = trim(file_get_contents("php://input"));
                 $decode = json_decode($konten, true);
-                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                     if(empty($decode['kodepoli'])) { 
                         $response = array(
                             'metadata' => array(
@@ -133,7 +133,7 @@
                                 http_response_code(201);
                             }else{
                                 $data = fetch_array(bukaquery2("SELECT poliklinik.nm_poli,COUNT(reg_periksa.kd_poli) as total_antrean,dokter.nm_dokter,
-                                    CONCAT(00,COUNT(reg_periksa.kd_poli)) as antrean_panggil,SUM(CASE WHEN reg_periksa.stts!='Sudah' THEN 1 ELSE 0 END) as sisa_antrean,
+                                    SUM(CASE WHEN reg_periksa.stts ='Belum' THEN 1 ELSE 0 END) as sisa_antrean,
                                     ('Datanglah Minimal 30 Menit, jika no antrian anda terlewat, silakan konfirmasi ke bagian Pendaftaran atau Perawat Poli, Terima Kasih ..') as keterangan
                                     FROM reg_periksa INNER JOIN poliklinik ON poliklinik.kd_poli=reg_periksa.kd_poli INNER JOIN dokter ON reg_periksa.kd_dokter=dokter.kd_dokter
                                     WHERE reg_periksa.tgl_registrasi='$decode[tanggalperiksa]' AND reg_periksa.kd_poli='$kdpoli' and reg_periksa.kd_dokter='$kddokter' 
@@ -146,7 +146,7 @@
                                             'namadokter' => $data['nm_dokter'],
                                             'totalantrean' => $data['total_antrean'],
                                             'sisaantrean' => $data['sisa_antrean'],
-                                            'antreanpanggil' =>$kdpoli."-".$data['antrean_panggil'],
+                                            'antreanpanggil' =>$kdpoli."-".getOne2("select reg_periksa.no_reg from reg_periksa where reg_periksa.stts='Belum' and reg_periksa.kd_dokter='$kddokter' and reg_periksa.kd_poli='$kdpoli' and reg_periksa.tgl_registrasi='$decode[tanggalperiksa]' order by CONVERT(RIGHT(reg_periksa.no_reg,3),signed) limit 1 "),
                                             'sisakuotajkn' => ($kuota-$data['total_antrean'])."",
                                             'kuotajkn' => $kuota,
                                             'sisakuotanonjkn' => ($kuota-$data['total_antrean'])."",
@@ -186,7 +186,7 @@
                 $konten = trim(file_get_contents("php://input"));
                 $decode = json_decode($konten, true);
                 
-                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                     if (empty($decode['nomorkartu'])){ 
                         $response = array(
                             'metadata' => array(
@@ -432,13 +432,21 @@
                                 http_response_code(201);
                             }else{
                                 if(empty(cekpasien($decode['nik'],$decode['nomorkartu']))){ 
-                                    $response = array(
+                                    /* Silahkan aktifkan ini jika tidak ingin BPJS bisa menginsert data pasien baru
+                                     * $response = array(
                                         'metadata' => array(
                                             'message' =>  "Data pasien ini tidak ditemukan, silahkan melakukan registrasi pasien baru ke loket administrasi Kami",
                                             'code' => 201
                                         )
                                     ); 
-                                    http_response_code(201);
+                                    http_response_code(201);*/
+                                    $response = array(
+                                        'metadata' => array(
+                                            'message' =>  "Data pasien ini tidak ditemukan",
+                                            'code' => 202
+                                        )
+                                    ); 
+                                    http_response_code(202);
                                 }else{
                                     $sudahdaftar=getOne2("select count(reg_periksa.no_rawat) from reg_periksa inner join pasien on reg_periksa.no_rkm_medis=pasien.no_rkm_medis where reg_periksa.kd_poli='$kdpoli' and reg_periksa.kd_dokter='$kddokter' and reg_periksa.tgl_registrasi='$decode[tanggalperiksa]' and pasien.no_peserta='$decode[nomorkartu]' ");
                                     if($sudahdaftar>0){
@@ -481,8 +489,8 @@
                                                         $sttsumur   = "Hr";
                                                     }
                                                 }
+                                                
                                                 $query = bukaquery2("insert into reg_periksa values('$noReg', '$no_rawat', '$decode[tanggalperiksa]',current_time(), '$kddokter', '$datapeserta[no_rkm_medis]', '$kdpoli', '$datapeserta[namakeluarga]', '$datapeserta[alamatpj], $datapeserta[kelurahanpj], $datapeserta[kecamatanpj], $datapeserta[kabupatenpj], $datapeserta[propinsipj]', '$datapeserta[keluarga]', '".getOne2("select registrasilama from poliklinik where kd_poli='$kdpoli'")."', 'Belum','Lama','Ralan', '".CARABAYAR."', '$umur','$sttsumur','Belum Bayar', '$statuspoli')");
-
                                                 if ($query) {
                                                     $response = array(
                                                         'response' => array(
@@ -556,7 +564,7 @@
                 $header = apache_request_headers();
                 $konten = trim(file_get_contents("php://input"));
                 $decode = json_decode($konten, true);
-                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                     @$tanggal=date("Y-m-d", ($decode['waktu']/1000));
                     
                     if(empty($decode['kodebooking'])) { 
@@ -666,7 +674,7 @@
                 $header = apache_request_headers();
                 $konten = trim(file_get_contents("php://input"));
                 $decode = json_decode($konten, true);
-                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                     if(empty($decode['kodebooking'])) { 
                         $response = array(
                             'metadata' => array(
@@ -742,10 +750,10 @@
                                     $response = array(
                                         'metadata' => array(
                                             'message' => "Maaf Terjadi Kesalahan, Hubungi Admnistrator..",
-                                            'code' => 401
+                                            'code' => 201
                                         )
                                     );
-                                    http_response_code(401);
+                                    http_response_code(201);
                                 }
                             }
                         }
@@ -764,7 +772,7 @@
                 $header = apache_request_headers();
                 $konten = trim(file_get_contents("php://input"));
                 $decode = json_decode($konten, true);
-                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                     if(empty($decode['kodebooking'])) { 
                         $response = array(
                             'metadata' => array(
@@ -782,7 +790,7 @@
                         );
                         http_response_code(201);
                     }else{
-                        $booking = fetch_array(bukaquery2("select no_rawat,tanggalperiksa,status,validasi,nomorreferensi from referensi_mobilejkn_bpjs where no_rawat='$decode[kodebooking]'"));
+                        $booking = fetch_array(bukaquery2("select no_rawat,tanggalperiksa,status,validasi,nomorreferensi,kodedokter,kodepoli,jampraktek from referensi_mobilejkn_bpjs where no_rawat='$decode[kodebooking]'"));
                         if(empty($booking['status'])) {
                             $response = array(
                                 'metadata' => array(
@@ -801,26 +809,27 @@
                                 );
                                 http_response_code(201);
                             }else if($booking['status']=='Checkin'){
+                                $kodedokter = getOne2("select kd_dokter from maping_dokter_dpjpvclaim where kd_dokter_bpjs='$booking[kodedokter]'");
+                                $kodepoli   = getOne2("select kd_poli_rs from maping_poli_bpjs where kd_poli_bpjs='$booking[kodepoli]'");
+                                $noreg      = getOne2("select no_reg from reg_periksa where no_rawat='$decode[kodebooking]'");
                                 $data = fetch_array(bukaquery("SELECT reg_periksa.kd_poli,poliklinik.nm_poli,dokter.nm_dokter,
                                     reg_periksa.no_reg,COUNT(reg_periksa.no_rawat) as total_antrean,
-                                    CONCAT(00,COUNT(reg_periksa.no_rawat)) as antrean_panggil,
-                                    SUM(CASE WHEN reg_periksa.stts ='Belum' THEN 1 ELSE 0 END) as sisa_antrean,
-                                    SUM(CASE WHEN reg_periksa.stts ='Sudah' THEN 1 ELSE 0 END) as sudah_selesai,
-                                    ('Datanglah Minimal 30 Menit, jika no antrian anda terlewat, silakan konfirmasi ke bagian Pendaftaran atau Perawat Poli, Terima Kasih ..') as keterangan
+                                    SUM(CASE WHEN reg_periksa.stts ='Belum' THEN 1 ELSE 0 END) as sisa_antrean
                                     FROM reg_periksa INNER JOIN poliklinik ON poliklinik.kd_poli=reg_periksa.kd_poli
                                     INNER JOIN dokter ON dokter.kd_dokter=reg_periksa.kd_dokter
-                                    WHERE reg_periksa.no_rawat='$decode[kodebooking]'"));
+                                    WHERE reg_periksa.kd_dokter='$kodedokter' and reg_periksa.kd_poli='$kodepoli'and reg_periksa.tgl_registrasi='$booking[tanggalperiksa]' 
+                                    and CONVERT(RIGHT(reg_periksa.no_reg,3),signed)<CONVERT(RIGHT($noreg,3),signed)"));
 
                                 if ($data['nm_poli'] != '') {
                                     $response = array(
                                         'response' => array(
-                                            'nomorantrean' => $data['kd_poli']."-".$data['no_reg'],
+                                            'nomorantrean' => $data['kd_poli']."-".$noreg,
                                             'namapoli' => $data['nm_poli'],
                                             'namadokter' => $data['nm_dokter'],
                                             'sisaantrean' => $data['sisa_antrean'],
-                                            'antreanpanggil' => $data['kd_poli']."-".$data['no_reg'],
+                                            'antreanpanggil' => $data['kd_poli']."-".getOne2("select reg_periksa.no_reg from reg_periksa where reg_periksa.stts='Belum' and reg_periksa.kd_dokter='$kodedokter' and reg_periksa.kd_poli='$kodepoli' and reg_periksa.tgl_registrasi='$booking[tanggalperiksa]' and CONVERT(RIGHT(reg_periksa.no_reg,3),signed)<=CONVERT(RIGHT($noreg,3),signed) order by CONVERT(RIGHT(reg_periksa.no_reg,3),signed) limit 1 "),
                                             'waktutunggu' => (($data['sisa_antrean']*$waktutunggu)*1000),
-                                            'keterangan' => $data['keterangan']
+                                            'keterangan' => "Datanglah Minimal 30 Menit, jika no antrian anda terlewat, silakan konfirmasi ke bagian Pendaftaran atau Perawat Poli, Terima Kasih ..Datanglah Minimal 30 Menit, jika no antrian anda terlewat, silakan konfirmasi ke bagian Pendaftaran atau Perawat Poli, Terima Kasih .."
                                         ),
                                         'metadata' => array(
                                             'message' => 'Ok',
@@ -854,7 +863,7 @@
                 $header = apache_request_headers();
                 $konten = trim(file_get_contents("php://input"));
                 $decode = json_decode($konten, true);
-                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                     if(empty($decode['tanggalawal'])) { 
                         $response = array(
                             'metadata' => array(
@@ -970,7 +979,7 @@
                 $header = apache_request_headers();
                 $konten = trim(file_get_contents("php://input"));
                 $decode = json_decode($konten, true);
-                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (PASSWORD==$header['x-password']) && (cektoken($header['x-token'])=='true')){
+                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
                     if (empty($decode['nopeserta'])){ 
                         $response = array(
                             'metadata' => array(
@@ -1048,6 +1057,429 @@
                     http_response_code(201);
                 }
                 break;
+            case "pasienbaru":
+                $header = apache_request_headers();
+                $konten = trim(file_get_contents("php://input"));
+                $decode = json_decode($konten, true);
+                if((!empty($header['x-token'])) && (USERNAME==$header['x-username']) && (cektoken($header['x-token'])=='true')){
+                    if (empty($decode['nomorkartu'])){ 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Nomor Kartu tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if (mb_strlen($decode['nomorkartu'], 'UTF-8') <> 13){ 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Nomor Kartu harus 13 digit',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if (!preg_match("/^[0-9]{13}$/",$decode['nomorkartu'])){ 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Nomor Kartu tidak sesuai',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }elseif (empty($decode['nik'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'NIK tidak boleh kosong ',
+                                'code' => 201
+                            )
+                        ); 
+                        http_response_code(201);
+                    }elseif (strlen($decode['nik']) <> 16) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'NIK harus 16 digit ',
+                                'code' => 201
+                            )
+                        ); 
+                        http_response_code(201);
+                    }else if (!preg_match("/^[0-9]{16}$/",$decode['nik'])){ 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format NIK tidak sesuai',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }elseif (empty($decode['nomorkk'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Nomor KK tidak boleh kosong ',
+                                'code' => 201
+                            )
+                        ); 
+                        http_response_code(201);
+                    }elseif (strlen($decode['nomorkk']) <> 16) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Nomor KK harus 16 digit ',
+                                'code' => 201
+                            )
+                        ); 
+                        http_response_code(201);
+                    }else if (!preg_match("/^[0-9]{16}$/",$decode['nomorkk'])){ 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Nomor KK tidak sesuai',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['nama'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Nama tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['nama'],"'")||strpos($decode['nama'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Nama salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['jeniskelamin'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Jenis Kelamin tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['jeniskelamin'],"'")||strpos($decode['jeniskelamin'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Jenis Kelamin tidak ditemukan',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(!(($decode['jeniskelamin']=="L")||($decode['jeniskelamin']=="P"))){ 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Jenis Kelmain tidak ditemukan',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['tanggallahir'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Tanggal Lahir tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(!preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/",$decode['tanggallahir'])){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Tanggal Lahir tidak sesuai, format yang benar adalah yyyy-mm-dd',
+                                'code' => 201
+                            )
+                        );  
+                        http_response_code(201);
+                    }else if(empty($decode['nohp'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'No.HP tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['nohp'],"'")||strpos($decode['nohp'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format No.HP salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['alamat'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Alamat tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['alamat'],"'")||strpos($decode['alamat'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Alamat salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['kodeprop'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Kode Propinsi tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['kodeprop'],"'")||strpos($decode['kodeprop'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Kode Propinsi salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['namaprop'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Nama Propinsi tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['namaprop'],"'")||strpos($decode['namaprop'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Nama Propinsi salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['kodedati2'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Kode Dati II tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['kodedati2'],"'")||strpos($decode['kodedati2'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Kode Dati II salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['namadati2'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Nama Dati II tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['namadati2'],"'")||strpos($decode['namadati2'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Nama Dati II salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['kodekec'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Kode Kecamatan tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['kodekec'],"'")||strpos($decode['kodekec'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Kode Kecamatan salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['namakec'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Nama Kecamatan tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['namakec'],"'")||strpos($decode['namakec'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Nama Kecamatan salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['kodekel'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Kode Kelurahan tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['kodekel'],"'")||strpos($decode['kodekel'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Kode Kelurahan salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['namakel'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Nama Kelurahan tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['namakel'],"'")||strpos($decode['namakel'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format Nama Kelurahan salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['rw'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'RW tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['rw'],"'")||strpos($decode['rw'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format RW salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(empty($decode['rt'])) { 
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'RT tidak boleh kosong',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else if(strpos($decode['rt'],"'")||strpos($decode['rt'],"\\")){
+                        $response = array(
+                            'metadata' => array(
+                                'message' => 'Format RT salah',
+                                'code' => 201
+                            )
+                        );
+                        http_response_code(201);
+                    }else{
+                        $setrm          = fetch_array(bukaquery2("select * from set_urut_no_rkm_medis"));
+                        $awalantahun    = "";
+                        $awalanbulan    = "";
+                        $norm           = "";
+                        $nourut         = "";
+                        
+                        if($setrm["tahun"]=="Yes"){
+                            $awalantahun=date("Y");
+                        }else{
+                            $awalantahun="";
+                        }
+
+                        if($setrm["bulan"]=="Yes"){
+                            $awalanbulan=date('m');
+                        }else{
+                            $awalanbulan="";
+                        }
+
+                       if($setrm["posisi_tahun_bulan"]=="Depan"){
+                            switch ($setrm["urutan"]) {
+                                case "Straight":
+                                    $max    = getOne2("select ifnull(MAX(CONVERT(RIGHT(no_rkm_medis,6),signed)),0)+1 from set_no_rkm_medis");
+                                    $nourut = sprintf("%06s", $max);
+                                    break;
+                                case "Terminal":
+                                    $max    = getOne2("select ifnull(MAX(CONVERT(CONCAT(SUBSTRING(RIGHT(no_rkm_medis,6),5,2),SUBSTRING(RIGHT(no_rkm_medis,6),3,2),SUBSTRING(RIGHT(no_rkm_medis,6),1,2)),signed)),0)+1 from set_no_rkm_medis");
+                                    $nourut = substr(sprintf("%06s", $max),4,2).substr(sprintf("%06s", $max),2,2).substr(sprintf("%06s", $max),0,2);
+                                    break;
+                                case "Middle":
+                                    $max    = getOne2("select ifnull(MAX(CONVERT(CONCAT(SUBSTRING(RIGHT(no_rkm_medis,6),3,2),SUBSTRING(RIGHT(no_rkm_medis,6),1,2),SUBSTRING(RIGHT(no_rkm_medis,6),5,2)),signed)),0)+1 from set_no_rkm_medis");
+                                    $nourut = substr(sprintf("%06s", $max),2,2).substr(sprintf("%06s", $max),0,2).substr(sprintf("%06s", $max),4,2);
+                                    break;
+                            }
+                        }else if($setrm["posisi_tahun_bulan"]=="Belakang"){
+                            switch ($setrm["urutan"]) {
+                                case "Straight":
+                                    $max    = getOne2("select ifnull(MAX(CONVERT(LEFT(no_rkm_medis,6),signed)),0)+1 from set_no_rkm_medis");
+                                    $nourut = sprintf("%06s", $max);
+                                    break;
+                                case "Terminal":
+                                    $max    = getOne2("select ifnull(MAX(CONVERT(CONCAT(SUBSTRING(LEFT(no_rkm_medis,6),5,2),SUBSTRING(LEFT(no_rkm_medis,6),3,2),SUBSTRING(LEFT(no_rkm_medis,6),1,2)),signed)),0)+1 from set_no_rkm_medis");
+                                    $nourut = substr(sprintf("%06s", $max),4,2).substr(sprintf("%06s", $max),2,2).substr(sprintf("%06s", $max),0,2);
+                                    break;
+                                case "Middle":
+                                    $max    = getOne2("select ifnull(MAX(CONVERT(CONCAT(SUBSTRING(LEFT(no_rkm_medis,6),3,2),SUBSTRING(LEFT(no_rkm_medis,6),1,2),SUBSTRING(LEFT(no_rkm_medis,6),5,2)),signed)),0)+1 from set_no_rkm_medis");
+                                    $nourut = substr(sprintf("%06s", $max),2,2).substr(sprintf("%06s", $max),0,2).substr(sprintf("%06s", $max),4,2);
+                                    break;
+                            }            
+                        }
+                        
+                        if($setrm["posisi_tahun_bulan"]=="Depan"){
+                            $norm=$awalantahun.$awalanbulan.$nourut;
+                        }else if($setrm["posisi_tahun_bulan"]=="Belakang"){
+                            if(strlen($awalanbulan.$awalantahun)>0){
+                                $norm=$nourut."-".$awalanbulan.$awalantahun;
+                            }else{
+                                $norm=$nourut;
+                            }            
+                        }
+                        
+                        bukaquery2("insert into kelurahan values('0','$decode[namakel]')");
+                        bukaquery2("insert into kecamatan values('0','$decode[namakec]')");
+                        bukaquery2("insert into kabupaten values('0','$decode[namadati2]')");
+                        bukaquery2("insert into propinsi values('0','$decode[namaprop]')");
+                        
+                        $query = bukaquery2("insert into pasien values('$norm','$decode[nama]','$decode[nik]','$decode[jeniskelamin]','-','$decode[tanggallahir]','-','$decode[alamat]','-','-','JOMBLO','-',current_date(),'$decode[nohp]','0','-','SAUDARA','-','".CARABAYAR."','$decode[nomorkartu]','".getOne2("select kelurahan.kd_kel from kelurahan where kelurahan.nm_kel='$decode[namakel]'")."','".getOne2("select kecamatan.kd_kec from kecamatan where kecamatan.nm_kec='$decode[namakec]'")."','".getOne2("select kabupaten.kd_kab from kabupaten where kabupaten.nm_kab='$decode[namadati2]'")."','-','$decode[alamat]','$decode[namakel]','$decode[namakec]','$decode[namadati2]','-','1','1','1','-','-','".getOne2("select propinsi.kd_prop from propinsi where propinsi.nm_prop='$decode[namaprop]'")."', '$decode[namaprop]')");
+                        if ($query) {
+                            $response = array(
+                                'response' => array(
+                                    'norm' => $norm
+                                ),
+                                'metadata' => array(
+                                    'message' => 'Harap datang ke admisi untuk melengkapi data rekam medis',
+                                    'code' => 200
+                                )
+                            );
+                            http_response_code(200);
+                        }else{
+                            $response = array(
+                                'metadata' => array(
+                                    'message' => 'Maaf Terjadi Kesalahan, Hubungi Admnistrator..',
+                                    'code' => 201
+                                )
+                            );
+                            http_response_code(201);
+                        }
+                    }
+                }else {
+                    $response = array(
+                        'metadata' => array(
+                            'message' => 'Nama User / Password / Token ada yang salah ..!!',
+                            'code' => 201
+                        )
+                    );
+                    http_response_code(201);
+                }
+                break;
         }
     }
     
@@ -1064,7 +1496,7 @@
         echo "   Hasilnya : \n";
         echo '   {'."\n";
         echo '      "response": {'."\n";
-        echo '         "token": "xxxxxxxxxxxxxxxxx'."\n";
+        echo '         "token": "xxxxxxxxxxxxxxxxx"'."\n";
         echo '      },'."\n";
         echo '      "metadata": {'."\n";
         echo '         "message": "Ok",'."\n";
@@ -1073,7 +1505,7 @@
         echo '   }'."\n\n";
         echo "2. Menampilkan status atrean poli, methode POST\n";
         echo "   gunakan URL http://ipserverws:port/webapps/api-bpjsfktl/statusantrean \n";
-        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS, x-password:pass yang diberikan RS\n";
+        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS";
         echo "   Body berisi : \n";
         echo '   {'."\n";
 	echo '      "kodepoli":"XXX",'."\n";
@@ -1102,7 +1534,7 @@
         echo '   }'."\n\n";
         echo "3. Mengambil atrean poli, methode POST\n";
         echo "   gunakan URL http://ipserverws:port/webapps/api-bpjsfktl/ambilantrean \n";
-        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS, x-password:pass yang diberikan RS\n";
+        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS";
         echo "   Body berisi : \n";
         echo '   {'."\n";
         echo '      "nomorkartu": "XXXXXXXXXXXXXX",'."\n";
@@ -1113,7 +1545,7 @@
         echo '      "tanggalperiksa": "XXXX-XX-XX",'."\n";
         echo '      "kodedokter": "XXXXX",'."\n";
         echo '      "jampraktek": "XX:XX-XX:XX",'."\n";
-        echo '      "jeniskunjungan": x,'."\n";
+        echo '      "jeniskunjungan": "x",'."\n";
         echo '      "nomorreferensi": "XXXXXXXXXXXX"'."\n";
         echo '   }'."\n\n";
         echo "   Hasilnya : \n";
@@ -1140,7 +1572,7 @@
         echo '   }'."\n\n";
         echo "4. Melakukan checkin poli, methode POST\n";
         echo "   gunakan URL http://ipserverws:port/webapps/api-bpjsfktl/checkinantrean \n";
-        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS, x-password:pass yang diberikan RS\n";
+        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS";
         echo "   Body berisi : \n";
         echo '   {'."\n";
         echo '      "kodebooking": "XXXXXXXXXXXXXX",'."\n";
@@ -1155,11 +1587,11 @@
         echo '   }'."\n\n";
         echo "5. Membatalkan antrean poli dan hanya bisa dilakukan sebelum pasien checkin, methode POST\n";
         echo "   gunakan URL http://ipserverws:port/webapps/api-bpjsfktl/batalantrean \n";
-        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS, x-password:pass yang diberikan RS\n";
+        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS";
         echo "   Body berisi : \n";
         echo '   {'."\n";
         echo '      "kodebooking": "XXXXXXXXXXXXXX",'."\n";
-        echo '      "keterangan": XXXXXXXXXXXXXXXXXXXXXXX'."\n";
+        echo '      "keterangan": "XXXXXXXXXXXXXXXXXXXXXXX"'."\n";
         echo '   }'."\n\n";
         echo "   Hasilnya : \n";
         echo '   {'."\n";
@@ -1170,7 +1602,7 @@
         echo '   }'."\n\n";
         echo "6. Melihat sisa antrean poli dan hanya bisa dilakukan setelah pasien checkin, methode POST\n";
         echo "   gunakan URL http://ipserverws:port/webapps/api-bpjsfktl/sisaantrean \n";
-        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS, x-password:pass yang diberikan RS\n";
+        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS";
         echo "   Body berisi : \n";
         echo '   {'."\n";
         echo '      "kodebooking": "XXXXXXXXXXXXXX"'."\n";
@@ -1193,7 +1625,7 @@
         echo '   }'."\n\n";
         echo "7. Melihat Jadwal Operasi RS, methode POST\n";
         echo "   gunakan URL http://ipserverws:port/webapps/api-bpjsfktl/jadwaloperasirs \n";
-        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS, x-password:pass yang diberikan RS\n";
+        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS";
         echo "   Body berisi : \n";
         echo '   {'."\n";
         echo '      "tanggalawal": "XXXX-XX-XX"'."\n";
@@ -1222,7 +1654,7 @@
         echo '   }'."\n\n";
         echo "8. Melihat Jadwal Operasi Pasien, methode POST\n";
         echo "   gunakan URL http://ipserverws:port/webapps/api-bpjsfktl/jadwaloperasipasien \n";
-        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS, x-password:pass yang diberikan RS\n";
+        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS";
         echo "   Body berisi : \n";
         echo '   {'."\n";
         echo '      "nopeserta": "XXXXXXXXXX"'."\n";
@@ -1240,6 +1672,40 @@
         echo '                  "terlaksana": X'."\n";
         echo '              },'."\n";
         echo '           ]'."\n";
+        echo '      },'."\n";
+        echo '      "metadata": {'."\n";
+        echo '          "message": "Ok",'."\n";
+        echo '          "code": 200'."\n";
+        echo '      }'."\n";
+        echo '   }'."\n\n";
+        echo "9. Pasien Baru, methode POST\n";
+        echo "   gunakan URL http://ipserverws:port/webapps/api-bpjsfktl/pasienbaru \n";
+        echo "   Header gunakan x-token:token yang diambil sebelumnya, x-username:user yang diberikan RS";
+        echo "   Body berisi : \n";
+        echo '   {'."\n";
+        echo '      "nomorkartu": "XXXXXXXXXXXXX",'."\n";
+        echo '      "nik": "XXXXXXXXXXX",'."\n";
+        echo '      "nomorkk": "XXXXXXXX",'."\n";
+        echo '      "nama": "XXXXXXXXXXXXXXXXXXXXXXXXXXX",'."\n";
+        echo '      "jeniskelamin": "L/P",'."\n";
+        echo '      "tanggallahir": "XXXX-XX-XX",'."\n";
+        echo '      "nohp": "XXXXXXXXXXXX",'."\n";
+        echo '      "alamat": "XXXXXXXX",'."\n";
+        echo '      "kodeprop": "XX",'."\n";
+        echo '      "namaprop": "XXXXXXXXXXXXXXX",'."\n";
+        echo '      "kodedati2": "XXXXXXX",'."\n";
+        echo '      "namadati2": "XXXXXXXXXXXXXXX",'."\n";
+        echo '      "kodekec": "XXXX",'."\n";
+        echo '      "namakec": "XXXXXXXXXXXXXX",'."\n";
+        echo '      "kodekel": "XXXX",'."\n";
+        echo '      "namakel": "XXXXXXXXXXXXX",'."\n";
+        echo '      "rw": "XXX",'."\n";
+        echo '      "rt": "XXX"'."\n";
+        echo '   }'."\n\n";
+        echo "   Hasilnya : \n";
+        echo '   {'."\n";
+        echo '      "response": {'."\n";
+        echo '          "norm": "XXXXXX",'."\n";
         echo '      },'."\n";
         echo '      "metadata": {'."\n";
         echo '          "message": "Ok",'."\n";
