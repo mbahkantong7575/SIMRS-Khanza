@@ -57,6 +57,7 @@ public class DlgDeposit extends javax.swing.JDialog {
     private int i=0;
     private PreparedStatement ps;
     private ResultSet rs;
+    private double ppn=0,nilaippn=0;
 
     /** Creates new form DlgPemberianInfus
      * @param parent
@@ -65,7 +66,7 @@ public class DlgDeposit extends javax.swing.JDialog {
         super(parent, modal);
         initComponents();
 
-        Object[] row={"No.Rawat","Pasien","Tanggal","Besar Deposit","Petugas"};
+        Object[] row={"No.Deposit","No.Rawat","No.RM","Pasien","Tanggal","Akun Bayar","Besar Deposit","PPN","Biaya PPN/Admin","Dibayar Pasien","Kode Petugas","Petugas","Kode Rek"};
         tabMode=new DefaultTableModel(null,row){
               @Override public boolean isCellEditable(int rowIndex, int colIndex){return false;}
         };
@@ -75,25 +76,43 @@ public class DlgDeposit extends javax.swing.JDialog {
         tbObat.setPreferredScrollableViewportSize(new Dimension(500,500));
         tbObat.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
-        for (i = 0; i < 5; i++) {
+        for (i = 0; i < 13; i++) {
             TableColumn column = tbObat.getColumnModel().getColumn(i);
             if(i==0){
-                column.setPreferredWidth(120);
+                column.setPreferredWidth(95);
             }else if(i==1){
-                column.setPreferredWidth(300);
+                column.setPreferredWidth(105);
             }else if(i==2){
-                column.setPreferredWidth(130);
+                column.setPreferredWidth(70);
             }else if(i==3){
-                column.setPreferredWidth(120);
+                column.setPreferredWidth(160);
             }else if(i==4){
-                column.setPreferredWidth(300);
+                column.setPreferredWidth(118);
+            }else if(i==5){
+                column.setPreferredWidth(150);
+            }else if(i==6){
+                column.setPreferredWidth(90);
+            }else if(i==7){
+                column.setPreferredWidth(30);
+            }else if(i==8){
+                column.setPreferredWidth(90);
+            }else if(i==9){
+                column.setPreferredWidth(95);
+            }else if(i==10){
+                column.setPreferredWidth(80);
+            }else if(i==11){
+                column.setPreferredWidth(150);
+            }else if(i==12){
+                column.setMinWidth(0);
+                column.setMaxWidth(0);
             }
         }
         tbObat.setDefaultRenderer(Object.class, new WarnaTable());
 
         TNoRw.setDocument(new batasInput((byte)17).getKata(TNoRw));
         TCari.setDocument(new batasInput((byte)100).getKata(TCari));
-        kdptg.setDocument(new batasInput((byte)20).getKata(kdptg));
+        KodePetugas.setDocument(new batasInput((byte)20).getKata(KodePetugas));
+        Nomor.setDocument(new batasInput((byte)17).getKata(Nomor));
         BesarDeposit.setDocument(new batasInput((byte)15).getOnlyAngka(BesarDeposit));
         if(koneksiDB.CARICEPAT().equals("aktif")){
             TCari.getDocument().addDocumentListener(new javax.swing.event.DocumentListener(){
@@ -117,6 +136,22 @@ public class DlgDeposit extends javax.swing.JDialog {
                 }
             });
         } 
+        
+        BesarDeposit.getDocument().addDocumentListener(new javax.swing.event.DocumentListener(){
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                cekPPN();
+            }
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                cekPPN();
+            }
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                cekPPN();
+            }
+        });
+        
         ChkInput.setSelected(false);
         isForm();
         
@@ -128,10 +163,10 @@ public class DlgDeposit extends javax.swing.JDialog {
             @Override
             public void windowClosed(WindowEvent e) {
                 if(petugas.getTable().getSelectedRow()!= -1){                   
-                    kdptg.setText(petugas.getTable().getValueAt(petugas.getTable().getSelectedRow(),0).toString());
-                    TPerawat.setText(petugas.getTable().getValueAt(petugas.getTable().getSelectedRow(),1).toString());
+                    KodePetugas.setText(petugas.getTable().getValueAt(petugas.getTable().getSelectedRow(),0).toString());
+                    NamaPetugas.setText(petugas.getTable().getValueAt(petugas.getTable().getSelectedRow(),1).toString());
                 }  
-                kdptg.requestFocus();
+                KodePetugas.requestFocus();
             }
             @Override
             public void windowIconified(WindowEvent e) {}
@@ -142,23 +177,13 @@ public class DlgDeposit extends javax.swing.JDialog {
             @Override
             public void windowDeactivated(WindowEvent e) {}
         });
-        try {
-            ps=koneksi.prepareStatement("select deposit.no_rawat,concat(reg_periksa.no_rkm_medis,' ',pasien.nm_pasien), " +
-                "deposit.tgl_deposit,deposit.besar_deposit,concat(deposit.nip,' ',petugas.nama) " +
-                "from deposit inner join reg_periksa inner join pasien inner join petugas " +
-                "on deposit.no_rawat=reg_periksa.no_rawat " +
-                "and reg_periksa.no_rkm_medis=pasien.no_rkm_medis "+
-                "and deposit.nip=petugas.nip " +
-                "where deposit.tgl_deposit between ? and ? and deposit.no_rawat like ? or "+
-                "deposit.tgl_deposit between ? and ? and reg_periksa.no_rkm_medis like ? or "+
-                "deposit.tgl_deposit between ? and ? and pasien.nm_pasien like ? or " +
-                "deposit.tgl_deposit between ? and ? and deposit.nip like ? or "+
-                "deposit.tgl_deposit between ? and ? and petugas.nama like ? order by deposit.tgl_deposit desc");
-        } catch (Exception e) {
-            System.out.println(e);
-        }
         
         Valid.loadCombo(AkunBayar,"nama_bayar","akun_bayar");
+        try {
+            Persenppn.setText(""+Sequel.cariIsiAngka("select ppn from akun_bayar where nama_bayar=?",AkunBayar.getSelectedItem().toString()));
+        } catch (Exception e) {
+            Persenppn.setText("0");
+        }
         
         jam();
     }
@@ -207,8 +232,8 @@ public class DlgDeposit extends javax.swing.JDialog {
         cmbMnt = new widget.ComboBox();
         cmbDtk = new widget.ComboBox();
         jLabel13 = new widget.Label();
-        kdptg = new widget.TextBox();
-        TPerawat = new widget.TextBox();
+        KodePetugas = new widget.TextBox();
+        NamaPetugas = new widget.TextBox();
         BtnSeekPetugas = new widget.Button();
         jLabel15 = new widget.Label();
         BesarDeposit = new widget.TextBox();
@@ -218,10 +243,10 @@ public class DlgDeposit extends javax.swing.JDialog {
         jLabel11 = new widget.Label();
         AkunBayar = new widget.ComboBox();
         jLabel16 = new widget.Label();
-        BesarDeposit1 = new widget.TextBox();
-        BesarDeposit2 = new widget.TextBox();
+        Persenppn = new widget.TextBox();
+        BesarPPN = new widget.TextBox();
         jLabel17 = new widget.Label();
-        BesarDeposit3 = new widget.TextBox();
+        DibayarPasien = new widget.TextBox();
 
         jPopupMenu1.setName("jPopupMenu1"); // NOI18N
 
@@ -413,7 +438,7 @@ public class DlgDeposit extends javax.swing.JDialog {
         panelGlass9.add(jLabel19);
 
         DTPCari1.setForeground(new java.awt.Color(50, 70, 50));
-        DTPCari1.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "12-06-2021" }));
+        DTPCari1.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "16-06-2021" }));
         DTPCari1.setDisplayFormat("dd-MM-yyyy");
         DTPCari1.setName("DTPCari1"); // NOI18N
         DTPCari1.setOpaque(false);
@@ -427,7 +452,7 @@ public class DlgDeposit extends javax.swing.JDialog {
         panelGlass9.add(jLabel21);
 
         DTPCari2.setForeground(new java.awt.Color(50, 70, 50));
-        DTPCari2.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "12-06-2021" }));
+        DTPCari2.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "16-06-2021" }));
         DTPCari2.setDisplayFormat("dd-MM-yyyy");
         DTPCari2.setName("DTPCari2"); // NOI18N
         DTPCari2.setOpaque(false);
@@ -520,7 +545,7 @@ public class DlgDeposit extends javax.swing.JDialog {
 
         DTPTgl.setEditable(false);
         DTPTgl.setForeground(new java.awt.Color(50, 70, 50));
-        DTPTgl.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "12-06-2021" }));
+        DTPTgl.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "16-06-2021" }));
         DTPTgl.setDisplayFormat("dd-MM-yyyy");
         DTPTgl.setName("DTPTgl"); // NOI18N
         DTPTgl.setOpaque(false);
@@ -572,22 +597,23 @@ public class DlgDeposit extends javax.swing.JDialog {
         FormInput.add(jLabel13);
         jLabel13.setBounds(0, 70, 75, 23);
 
-        kdptg.setHighlighter(null);
-        kdptg.setName("kdptg"); // NOI18N
-        kdptg.addKeyListener(new java.awt.event.KeyAdapter() {
+        KodePetugas.setEditable(false);
+        KodePetugas.setHighlighter(null);
+        KodePetugas.setName("KodePetugas"); // NOI18N
+        KodePetugas.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
-                kdptgKeyPressed(evt);
+                KodePetugasKeyPressed(evt);
             }
         });
-        FormInput.add(kdptg);
-        kdptg.setBounds(78, 70, 115, 23);
+        FormInput.add(KodePetugas);
+        KodePetugas.setBounds(78, 70, 115, 23);
 
-        TPerawat.setEditable(false);
-        TPerawat.setBackground(new java.awt.Color(202, 202, 202));
-        TPerawat.setHighlighter(null);
-        TPerawat.setName("TPerawat"); // NOI18N
-        FormInput.add(TPerawat);
-        TPerawat.setBounds(195, 70, 193, 23);
+        NamaPetugas.setEditable(false);
+        NamaPetugas.setBackground(new java.awt.Color(202, 202, 202));
+        NamaPetugas.setHighlighter(null);
+        NamaPetugas.setName("NamaPetugas"); // NOI18N
+        FormInput.add(NamaPetugas);
+        NamaPetugas.setBounds(195, 70, 193, 23);
 
         BtnSeekPetugas.setIcon(new javax.swing.ImageIcon(getClass().getResource("/picture/190.png"))); // NOI18N
         BtnSeekPetugas.setMnemonic('5');
@@ -649,6 +675,11 @@ public class DlgDeposit extends javax.swing.JDialog {
 
         AkunBayar.setName("AkunBayar"); // NOI18N
         AkunBayar.setPreferredSize(new java.awt.Dimension(420, 23));
+        AkunBayar.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                AkunBayarItemStateChanged(evt);
+            }
+        });
         AkunBayar.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 AkunBayarKeyPressed(evt);
@@ -662,44 +693,47 @@ public class DlgDeposit extends javax.swing.JDialog {
         FormInput.add(jLabel16);
         jLabel16.setBounds(430, 70, 172, 23);
 
-        BesarDeposit1.setText("0");
-        BesarDeposit1.setFocusTraversalPolicyProvider(true);
-        BesarDeposit1.setName("BesarDeposit1"); // NOI18N
-        BesarDeposit1.addKeyListener(new java.awt.event.KeyAdapter() {
+        Persenppn.setEditable(false);
+        Persenppn.setText("0");
+        Persenppn.setFocusTraversalPolicyProvider(true);
+        Persenppn.setName("Persenppn"); // NOI18N
+        Persenppn.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
-                BesarDeposit1KeyPressed(evt);
+                PersenppnKeyPressed(evt);
             }
         });
-        FormInput.add(BesarDeposit1);
-        BesarDeposit1.setBounds(610, 70, 37, 23);
+        FormInput.add(Persenppn);
+        Persenppn.setBounds(610, 70, 37, 23);
 
-        BesarDeposit2.setText("0");
-        BesarDeposit2.setFocusTraversalPolicyProvider(true);
-        BesarDeposit2.setName("BesarDeposit2"); // NOI18N
-        BesarDeposit2.setVerifyInputWhenFocusTarget(false);
-        BesarDeposit2.addKeyListener(new java.awt.event.KeyAdapter() {
+        BesarPPN.setEditable(false);
+        BesarPPN.setText("0");
+        BesarPPN.setFocusTraversalPolicyProvider(true);
+        BesarPPN.setName("BesarPPN"); // NOI18N
+        BesarPPN.setVerifyInputWhenFocusTarget(false);
+        BesarPPN.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
-                BesarDeposit2KeyPressed(evt);
+                BesarPPNKeyPressed(evt);
             }
         });
-        FormInput.add(BesarDeposit2);
-        BesarDeposit2.setBounds(649, 70, 106, 23);
+        FormInput.add(BesarPPN);
+        BesarPPN.setBounds(649, 70, 106, 23);
 
         jLabel17.setText("Dibayar Pasien : Rp.");
         jLabel17.setName("jLabel17"); // NOI18N
         FormInput.add(jLabel17);
         jLabel17.setBounds(430, 100, 177, 23);
 
-        BesarDeposit3.setText("0");
-        BesarDeposit3.setFocusTraversalPolicyProvider(true);
-        BesarDeposit3.setName("BesarDeposit3"); // NOI18N
-        BesarDeposit3.addKeyListener(new java.awt.event.KeyAdapter() {
+        DibayarPasien.setEditable(false);
+        DibayarPasien.setText("0");
+        DibayarPasien.setFocusTraversalPolicyProvider(true);
+        DibayarPasien.setName("DibayarPasien"); // NOI18N
+        DibayarPasien.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
-                BesarDeposit3KeyPressed(evt);
+                DibayarPasienKeyPressed(evt);
             }
         });
-        FormInput.add(BesarDeposit3);
-        BesarDeposit3.setBounds(610, 100, 145, 23);
+        FormInput.add(DibayarPasien);
+        DibayarPasien.setBounds(610, 100, 145, 23);
 
         PanelInput.add(FormInput, java.awt.BorderLayout.CENTER);
 
@@ -716,7 +750,7 @@ public class DlgDeposit extends javax.swing.JDialog {
         }else if(evt.getKeyCode()==KeyEvent.VK_DOWN){
             TCari.requestFocus();
         }else{            
-            Valid.pindah(evt,kdptg,DTPTgl);
+            Valid.pindah(evt,KodePetugas,DTPTgl);
         }
 }//GEN-LAST:event_TNoRwKeyPressed
 
@@ -725,20 +759,25 @@ public class DlgDeposit extends javax.swing.JDialog {
 }//GEN-LAST:event_DTPTglKeyPressed
 
     private void BtnSimpanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BtnSimpanActionPerformed
-        if(TNoRw.getText().trim().equals("")||TPasien.getText().trim().equals("")){
-            Valid.textKosong(TNoRw,"pasien");
-        }else if(kdptg.getText().trim().equals("")||TPerawat.getText().trim().equals("")){
-            Valid.textKosong(kdptg,"Petugas");
+        if(Nomor.getText().trim().equals("")){
+            Valid.textKosong(TNoRw,"Nomor Deposit");
+        }else if(TNoRw.getText().trim().equals("")||TPasien.getText().trim().equals("")){
+            Valid.textKosong(TNoRw,"Pasien");
+        }else if(KodePetugas.getText().trim().equals("")||NamaPetugas.getText().trim().equals("")){
+            Valid.textKosong(KodePetugas,"Petugas");
+        }else if(AkunBayar.getSelectedItem().toString().trim().equals("")){
+            Valid.textKosong(AkunBayar,"Akun Bayar");
         }else if(BesarDeposit.getText().equals("")||BesarDeposit.getText().equals("0")){
             Valid.textKosong(BesarDeposit,"Deposit");
         }else{
-            if(Sequel.menyimpantf("deposit","?,?,?,?","Deposit",4,new String[]{
-                TNoRw.getText(),Valid.SetTgl(DTPTgl.getSelectedItem()+"")+" "+cmbJam.getSelectedItem()+":"+cmbMnt.getSelectedItem()+":"+cmbDtk.getSelectedItem(),
-                BesarDeposit.getText(),kdptg.getText()})==true){
+            if(Sequel.menyimpantf("deposit","?,?,?,?,?,?,?","Deposit",7,new String[]{
+                Nomor.getText(),TNoRw.getText(),Valid.SetTgl(DTPTgl.getSelectedItem()+"")+" "+cmbJam.getSelectedItem()+":"+cmbMnt.getSelectedItem()+":"+cmbDtk.getSelectedItem(),
+                AkunBayar.getSelectedItem().toString(),nilaippn+"",BesarDeposit.getText(),KodePetugas.getText()
+            })==true){
                 tampil();
                 BtnBatalActionPerformed(evt);
             }else{
-                kdptg.requestFocus();
+                KodePetugas.requestFocus();
             }                
         }
 }//GEN-LAST:event_BtnSimpanActionPerformed
@@ -754,15 +793,16 @@ public class DlgDeposit extends javax.swing.JDialog {
     private void BtnBatalActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BtnBatalActionPerformed
         ChkInput.setSelected(true);
         isForm(); 
-        
+        nilaippn=0;
+        BesarPPN.setText("0");
         BesarDeposit.setText("0");
-        kdptg.setText("");
-        TPerawat.setText("");
+        DibayarPasien.setText("0");
         cmbJam.setSelectedItem(now.substring(11,13));
         cmbMnt.setSelectedItem(now.substring(14,16));
         cmbDtk.setSelectedItem(now.substring(17,19));
         DTPTgl.setDate(new Date());
         DTPTgl.requestFocus();
+        autoNomor();
 }//GEN-LAST:event_BtnBatalActionPerformed
 
     private void BtnBatalKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_BtnBatalKeyPressed
@@ -779,8 +819,8 @@ public class DlgDeposit extends javax.swing.JDialog {
             JOptionPane.showMessageDialog(null,"Maaf, Gagal menghapus. Pilih dulu data yang mau dihapus.\nKlik data pada table untuk memilih...!!!!");
         }else if(!(TPasien.getText().trim().equals(""))){
             try{
-                Sequel.queryu2("delete from deposit where no_rawat=? and tgl_deposit=?",2,new String[]{
-                    tbObat.getValueAt(tbObat.getSelectedRow(),0).toString(),tbObat.getValueAt(tbObat.getSelectedRow(),2).toString()
+                Sequel.queryu2("delete from deposit where no_deposit=?",1,new String[]{
+                    tbObat.getValueAt(tbObat.getSelectedRow(),0).toString()
                 });
                 tampil();
                 BtnBatalActionPerformed(evt);
@@ -921,15 +961,15 @@ private void ChkInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRS
         Valid.pindah(evt,cmbMnt,BesarDeposit);
     }//GEN-LAST:event_cmbDtkKeyPressed
 
-    private void kdptgKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_kdptgKeyPressed
+    private void KodePetugasKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_KodePetugasKeyPressed
         if(evt.getKeyCode()==KeyEvent.VK_PAGE_DOWN){
-            Sequel.cariIsi("select nama from petugas where nip=?",TPerawat,kdptg.getText());
+            Sequel.cariIsi("select nama from petugas where nip=?",NamaPetugas,KodePetugas.getText());
         }else if(evt.getKeyCode()==KeyEvent.VK_UP){
             BtnSeekPetugasActionPerformed(null);
         }else{
             Valid.pindah(evt,BesarDeposit,BtnSimpan);
         }
-    }//GEN-LAST:event_kdptgKeyPressed
+    }//GEN-LAST:event_KodePetugasKeyPressed
 
     private void BtnSeekPetugasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BtnSeekPetugasActionPerformed
         petugas.isCek();
@@ -940,18 +980,19 @@ private void ChkInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRS
     }//GEN-LAST:event_BtnSeekPetugasActionPerformed
 
     private void BesarDepositKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_BesarDepositKeyPressed
-        Valid.pindah(evt,cmbDtk,kdptg);
+        Valid.pindah(evt,cmbDtk,KodePetugas);
     }//GEN-LAST:event_BesarDepositKeyPressed
 
     private void formWindowOpened(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowOpened
         tampil();
+        autoNomor();
     }//GEN-LAST:event_formWindowOpened
 
     private void MnKwitansiDepositActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_MnKwitansiDepositActionPerformed
         if(TPasien.getText().trim().equals("")){
             JOptionPane.showMessageDialog(null,"Maaf, Silahkan anda pilih dulu pasien...!!!");
         }else{
-            Valid.panggilUrl("billing/LaporanBilling6.php?norawat="+TNoRw.getText().replaceAll(" ","_")+"&pasien="+TPasien.getText().replaceAll(" ","_")+"&tanggal="+DTPTgl.getSelectedItem()+"&deposit="+BesarDeposit.getText()+"&petugas="+kdptg.getText().replaceAll(" ","_"));
+            Valid.panggilUrl("billing/LaporanBilling6.php?norawat="+TNoRw.getText().replaceAll(" ","_")+"&pasien="+TPasien.getText().replaceAll(" ","_")+"&tanggal="+DTPTgl.getSelectedItem()+"&deposit="+BesarDeposit.getText()+"&petugas="+KodePetugas.getText().replaceAll(" ","_"));
         }
     }//GEN-LAST:event_MnKwitansiDepositActionPerformed
 
@@ -963,17 +1004,29 @@ private void ChkInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRS
         Valid.pindah(evt,BtnSeekPetugas,TCari);
     }//GEN-LAST:event_AkunBayarKeyPressed
 
-    private void BesarDeposit1KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_BesarDeposit1KeyPressed
+    private void PersenppnKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_PersenppnKeyPressed
         // TODO add your handling code here:
-    }//GEN-LAST:event_BesarDeposit1KeyPressed
+    }//GEN-LAST:event_PersenppnKeyPressed
 
-    private void BesarDeposit2KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_BesarDeposit2KeyPressed
+    private void BesarPPNKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_BesarPPNKeyPressed
         // TODO add your handling code here:
-    }//GEN-LAST:event_BesarDeposit2KeyPressed
+    }//GEN-LAST:event_BesarPPNKeyPressed
 
-    private void BesarDeposit3KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_BesarDeposit3KeyPressed
+    private void DibayarPasienKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_DibayarPasienKeyPressed
         // TODO add your handling code here:
-    }//GEN-LAST:event_BesarDeposit3KeyPressed
+    }//GEN-LAST:event_DibayarPasienKeyPressed
+
+    private void AkunBayarItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_AkunBayarItemStateChanged
+        if(this.isVisible()==true){
+            try {
+                ppn=Sequel.cariIsiAngka("select ppn from akun_bayar where nama_bayar=?",AkunBayar.getSelectedItem().toString());
+                Persenppn.setText(""+ppn);
+                cekPPN();
+            } catch (Exception e) {
+                Persenppn.setText("0");
+            }
+        }
+    }//GEN-LAST:event_AkunBayarItemStateChanged
 
     /**
     * @param args the command line arguments
@@ -994,9 +1047,7 @@ private void ChkInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRS
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private widget.ComboBox AkunBayar;
     private widget.TextBox BesarDeposit;
-    private widget.TextBox BesarDeposit1;
-    private widget.TextBox BesarDeposit2;
-    private widget.TextBox BesarDeposit3;
+    private widget.TextBox BesarPPN;
     private widget.Button BtnAll;
     private widget.Button BtnBatal;
     private widget.Button BtnCari;
@@ -1010,16 +1061,19 @@ private void ChkInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRS
     private widget.Tanggal DTPCari1;
     private widget.Tanggal DTPCari2;
     private widget.Tanggal DTPTgl;
+    private widget.TextBox DibayarPasien;
     private widget.PanelBiasa FormInput;
+    private widget.TextBox KodePetugas;
     private widget.Label LCount;
     private javax.swing.JMenuItem MnKwitansiDeposit;
+    private widget.TextBox NamaPetugas;
     private widget.TextBox Nomor;
     private javax.swing.JPanel PanelInput;
+    private widget.TextBox Persenppn;
     private widget.ScrollPane Scroll;
     private widget.TextBox TCari;
     private widget.TextBox TNoRw;
     private widget.TextBox TPasien;
-    private widget.TextBox TPerawat;
     private widget.ComboBox cmbDtk;
     private widget.ComboBox cmbJam;
     private widget.ComboBox cmbMnt;
@@ -1038,7 +1092,6 @@ private void ChkInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRS
     private widget.Label jLabel7;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPopupMenu jPopupMenu1;
-    private widget.TextBox kdptg;
     private widget.panelisi panelGlass8;
     private widget.panelisi panelGlass9;
     private widget.Table tbObat;
@@ -1046,30 +1099,48 @@ private void ChkInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRS
 
     public void tampil() {        
         Valid.tabelKosong(tabMode);
-        try{            
-            ps.setString(1,Valid.SetTgl(DTPCari1.getSelectedItem()+"")+" 00:00:00");
-            ps.setString(2,Valid.SetTgl(DTPCari2.getSelectedItem()+"")+" 23:59:59");
-            ps.setString(3,"%"+TCari.getText().trim()+"%");
-            ps.setString(4,Valid.SetTgl(DTPCari1.getSelectedItem()+"")+" 00:00:00");
-            ps.setString(5,Valid.SetTgl(DTPCari2.getSelectedItem()+"")+" 23:59:59");
-            ps.setString(6,"%"+TCari.getText().trim()+"%");
-            ps.setString(7,Valid.SetTgl(DTPCari1.getSelectedItem()+"")+" 00:00:00");
-            ps.setString(8,Valid.SetTgl(DTPCari2.getSelectedItem()+"")+" 23:59:59");
-            ps.setString(9,"%"+TCari.getText().trim()+"%");
-            ps.setString(10,Valid.SetTgl(DTPCari1.getSelectedItem()+"")+" 00:00:00");
-            ps.setString(11,Valid.SetTgl(DTPCari2.getSelectedItem()+"")+" 23:59:59");
-            ps.setString(12,"%"+TCari.getText().trim()+"%");
-            ps.setString(13,Valid.SetTgl(DTPCari1.getSelectedItem()+"")+" 00:00:00");
-            ps.setString(14,Valid.SetTgl(DTPCari2.getSelectedItem()+"")+" 23:59:59");
-            ps.setString(15,"%"+TCari.getText().trim()+"%");
-            rs=ps.executeQuery();
-            while(rs.next()){
-                tabMode.addRow(new String[]{rs.getString(1),
-                               rs.getString(2),
-                               rs.getString(3),
-                               Valid.SetAngka(rs.getDouble(4)),
-                               rs.getString(5)
-                });
+        try{        
+            ps=koneksi.prepareStatement(
+                "select deposit.no_deposit,deposit.no_rawat,reg_periksa.no_rkm_medis,pasien.nm_pasien, " +
+                "deposit.tgl_deposit,deposit.nama_bayar,deposit.besar_deposit,akun_bayar.ppn,deposit.besarppn,"+
+                "(deposit.besar_deposit+deposit.besarppn),deposit.nip,petugas.nama,akun_bayar.kd_rek " +
+                "from deposit inner join reg_periksa on deposit.no_rawat=reg_periksa.no_rawat "+
+                "inner join pasien on reg_periksa.no_rkm_medis=pasien.no_rkm_medis "+
+                "inner join petugas on deposit.nip=petugas.nip "+
+                "inner join akun_bayar on deposit.nama_bayar=akun_bayar.nama_bayar "+
+                "where deposit.tgl_deposit between ? and ? "+(TCari.getText().equals("")?"":
+                "and (deposit.no_deposit like ? or deposit.no_rawat like ? or reg_periksa.no_rkm_medis like ? or "+
+                "pasien.nm_pasien like ? or deposit.nip like ? or petugas.nama like ? or deposit.nama_bayar like ?)")+
+                " order by deposit.tgl_deposit desc");
+            try {
+                ps.setString(1,Valid.SetTgl(DTPCari1.getSelectedItem()+"")+" 00:00:00");
+                ps.setString(2,Valid.SetTgl(DTPCari2.getSelectedItem()+"")+" 23:59:59");
+                if(!TCari.getText().trim().equals("")){
+                    ps.setString(3,"%"+TCari.getText().trim()+"%");
+                    ps.setString(4,"%"+TCari.getText().trim()+"%");
+                    ps.setString(5,"%"+TCari.getText().trim()+"%");
+                    ps.setString(6,"%"+TCari.getText().trim()+"%");
+                    ps.setString(7,"%"+TCari.getText().trim()+"%");
+                    ps.setString(8,"%"+TCari.getText().trim()+"%");
+                    ps.setString(9,"%"+TCari.getText().trim()+"%");
+                }
+                    
+                rs=ps.executeQuery();
+                while(rs.next()){
+                    tabMode.addRow(new String[]{
+                        rs.getString(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6),Valid.SetAngka(rs.getDouble(7)),
+                        rs.getDouble(8)+"",Valid.SetAngka(rs.getDouble(9)),Valid.SetAngka(rs.getDouble(10)),rs.getString(11),rs.getString(12),rs.getString(13)
+                    });
+                }
+            } catch (Exception e) {
+                System.out.println("Notif : "+e);
+            } finally{
+                if(rs!=null){
+                    rs.close();
+                }
+                if(ps!=null){
+                    ps.close();
+                }
             }
         }catch(Exception e){
             System.out.println("Notifikasi : "+e);
@@ -1079,13 +1150,19 @@ private void ChkInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRS
 
     private void getData() {
         if(tbObat.getSelectedRow()!= -1){
-            TNoRw.setText(tbObat.getValueAt(tbObat.getSelectedRow(),0).toString()); 
-            TPasien.setText(tbObat.getValueAt(tbObat.getSelectedRow(),1).toString()); 
-            Valid.SetTgl(DTPTgl,tbObat.getValueAt(tbObat.getSelectedRow(),2).toString().substring(0,10));
-            cmbJam.setSelectedItem(tbObat.getValueAt(tbObat.getSelectedRow(),2).toString().substring(11,13));
-            cmbMnt.setSelectedItem(tbObat.getValueAt(tbObat.getSelectedRow(),2).toString().substring(14,16));
-            cmbDtk.setSelectedItem(tbObat.getValueAt(tbObat.getSelectedRow(),2).toString().substring(17,19)); 
-            BesarDeposit.setText(tbObat.getValueAt(tbObat.getSelectedRow(),3).toString());
+            //"No.Deposit","No.Rawat","No.RM","Pasien","Tanggal","Akun Bayar","Besar Deposit","PPN","Biaya PPN/Admin","Dibayar Pasien",",Petugas","Kode Rek"
+            Nomor.setText(tbObat.getValueAt(tbObat.getSelectedRow(),0).toString()); 
+            TNoRw.setText(tbObat.getValueAt(tbObat.getSelectedRow(),1).toString()); 
+            TPasien.setText(tbObat.getValueAt(tbObat.getSelectedRow(),2).toString()+" "+tbObat.getValueAt(tbObat.getSelectedRow(),3).toString()); 
+            Valid.SetTgl(DTPTgl,tbObat.getValueAt(tbObat.getSelectedRow(),4).toString().substring(0,10));
+            cmbJam.setSelectedItem(tbObat.getValueAt(tbObat.getSelectedRow(),4).toString().substring(11,13));
+            cmbMnt.setSelectedItem(tbObat.getValueAt(tbObat.getSelectedRow(),4).toString().substring(14,16));
+            cmbDtk.setSelectedItem(tbObat.getValueAt(tbObat.getSelectedRow(),4).toString().substring(17,19)); 
+            AkunBayar.setSelectedItem(tbObat.getValueAt(tbObat.getSelectedRow(),5).toString());
+            BesarDeposit.setText(tbObat.getValueAt(tbObat.getSelectedRow(),6).toString());
+            Persenppn.setText(tbObat.getValueAt(tbObat.getSelectedRow(),7).toString());
+            BesarPPN.setText(tbObat.getValueAt(tbObat.getSelectedRow(),8).toString());
+            DibayarPasien.setText(tbObat.getValueAt(tbObat.getSelectedRow(),9).toString());
         }
     }
 
@@ -1122,6 +1199,12 @@ private void ChkInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRS
         BtnSimpan.setEnabled(akses.getdeposit_pasien());
         BtnHapus.setEnabled(akses.getdeposit_pasien());
         BtnPrint.setEnabled(akses.getdeposit_pasien());
+        
+        if(akses.getjml2()>=1){
+            BtnSeekPetugas.setEnabled(false);
+            KodePetugas.setText(akses.getkode());
+            Sequel.cariIsi("select nama from petugas where nip=?", NamaPetugas,KodePetugas.getText());
+        } 
     }
     
     private void jam(){
@@ -1178,7 +1261,19 @@ private void ChkInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRS
     }
 
     private void autoNomor() {
-        Valid.autoNomer3("select ifnull(MAX(CONVERT(RIGHT(no_deposit,3),signed)),0) from pengeluaran_harian where tanggal like '%"+Valid.SetTgl(DTPTgl.getSelectedItem()+"")+"%' ",
-                "PH"+DTPTgl.getSelectedItem().toString().substring(6,10)+DTPTgl.getSelectedItem().toString().substring(3,5)+DTPTgl.getSelectedItem().toString().substring(0,2),3,Nomor); 
+        Valid.autoNomer3("select ifnull(MAX(CONVERT(RIGHT(no_deposit,4),signed)),0) from deposit where tgl_deposit like '%"+Valid.SetTgl(DTPTgl.getSelectedItem()+"")+"%' ",
+                "DP"+DTPTgl.getSelectedItem().toString().substring(6,10)+DTPTgl.getSelectedItem().toString().substring(3,5)+DTPTgl.getSelectedItem().toString().substring(0,2),4,Nomor); 
+    }
+
+    private void cekPPN() {
+        try {
+            if(Valid.SetAngka(BesarDeposit.getText())>0){
+                ppn=Valid.SetAngka(Persenppn.getText());
+                nilaippn=(ppn*Valid.SetAngka(BesarDeposit.getText()))/100;
+                BesarPPN.setText(Valid.SetAngka(nilaippn));
+                DibayarPasien.setText(Valid.SetAngka(Valid.SetAngka(BesarDeposit.getText())+nilaippn));
+            }
+        } catch (Exception e) {
+        }
     }
 }
