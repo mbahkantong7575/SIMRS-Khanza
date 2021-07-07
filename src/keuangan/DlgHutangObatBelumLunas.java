@@ -940,7 +940,6 @@ private void BtnCariKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_B
 
     private void formWindowOpened(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowOpened
         no_bukti.requestFocus();
-        tampil();
         tampilAkunBayar();
     }//GEN-LAST:event_formWindowOpened
 
@@ -973,7 +972,7 @@ private void BtnCariKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_B
         }else if(nip.getText().trim().equals("")||nama_petugas.getText().trim().equals("")){
             Valid.textKosong(nip,"Petugas");
         }else if(tabMode.getRowCount()==0){
-            JOptionPane.showMessageDialog(null,"Maaf, data sudah habis. Tidak ada data yang bisa anda print...!!!!");
+            JOptionPane.showMessageDialog(null,"Maaf, data sudah habis. Tidak ada data yang bisa anda bayar...!!!!");
         }else if(keterangan.getText().trim().equals("")){
             Valid.textKosong(keterangan,"Keterangan");
         }else if(tabMode.getRowCount()!=0){
